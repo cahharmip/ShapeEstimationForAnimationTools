@@ -5,3 +5,4 @@ class Tree():
 		self.significant = None
 		self.left = None
 		self.right = None
+		
