@@ -31,7 +31,7 @@ def myDrawContour(contour):
 	a,b,c = random.randint(0,255),random.randint(0,255),random.randint(0,255)
 	for i in range(len(contour)):
 		if i != len(contour) - 1:
-			print contour[i][0],contour[i+1][0]
+			# print contour[i][0],contour[i+1][0]	
 			cv2.line(imgTest,(contour[i][0][0],contour[i][0][1]),(contour[i+1][0][0],contour[i+1][0][1]),(a,b,c),0)
 		
 def groupListToTree(treeSet, listOfContoursList):
@@ -79,6 +79,8 @@ def LSFWithPerpendicularOffset(xArray,yArray):
 		b1 = -B - math.sqrt(math.pow(B,2)+1)
 	b0 = (sumY - sumX*b1)/n
 	
+	
+	# cv2.line(imgTest,firstPoint,secondPoint,(255,255,255),0)
 	return b0,b1
 
 def findLongestAndCreateListofContour(contours,longestIndex,listOfContoursList):
@@ -117,7 +119,19 @@ def mostDeviationIndex(b0,b1,xArray,yArray):
 			mostDeviation = dist
 			index = i
 			# print mostDeviation
-	return index, mostDeviation
+	xArraySorted = np.sort(xArray)
+	# print xArraySorted
+	#Test Draw approx line#
+	yInit = b0 + b1*100
+	yDes = b0 + b1*800
+	if math.isnan(yInit) :
+		yInit = 1
+	if math.isnan(yDes) :
+		yDes = 1
+	firstPoint = (100,int(yInit))
+	secondPoint = (800,int(yDes))
+	#######################
+	return index, mostDeviation , firstPoint, secondPoint
 
 def findLSFAndMostDev(tempX,tempY,sigma,tree):
 	for point in tree.data:
@@ -128,9 +142,6 @@ def findLSFAndMostDev(tempX,tempY,sigma,tree):
 	xArray = np.array(tempX,dtype='int64')
 	yArray = np.array(tempY,dtype='int64')
 	sigma = np.array(sigma,dtype='int64')
-	# b0,b1 = findRegression(xArray,yArray)
-	# print tree.data
-	# b0,b1 = initContourLinearEquation(tree.data)
 	b0,b1 = LSFWithPerpendicularOffset(xArray,yArray)
 	return mostDeviationIndex(b0,b1,xArray,yArray)
 
@@ -147,32 +158,58 @@ def traverseTreeToSelectSection(tree):
 
 	return "Select the lowest Deviation straight line on every side"
 
-def treeSubdividsor(tree):
+def treeSubdividsor(tree,height,width):
 	global recurRound
+	global imgTest
 	recurRound+=1
 	tempY = []
 	tempX = []
 	sigma = []
-	index,mostDeviation = findLSFAndMostDev(tempX,tempY,sigma,tree)
-	# cv2.drawContours(imgTest, tree.data, -1, (random.randint(50,255),random.randint(100,255),random.randint(50,255)),0)
+	index,mostDeviation,firstPoint,secondPoint = findLSFAndMostDev(tempX,tempY,sigma,tree)
 	myDrawContour(tree.data)
-	# print index
+	# cv2.line(imgTest,firstPoint,secondPoint,(255,255,255),0)
+	
+	# print "TreeData", tree.data[0] , tree.data[-1]
 	tree.significant = mostDeviation
-	leftTree = tree.data[0:index + 1]
-	rightTree = tree.data[index:]
-	if len(leftTree) > 1 and len(rightTree) > 1:
+	leftTree = tree.data[0:index ]
+	# print "LeftTree",len(leftTree), leftTree[0] if len(leftTree) > 1 else "endtree" , leftTree[-1] if len(leftTree) > 1 else "endtree"
+	rightTree = tree.data[index + 1 :]
+	# print "RightTree",len(rightTree), rightTree[0] if len(rightTree) > 1 else "endtree" ,rightTree[-1] if len(rightTree) > 1 else "endtree"
+	# print "___________"
+	if len(leftTree) > 1 :
 		tree.left = Tree(leftTree)
-		# print tree.left.data
-
-		tree.right = Tree(rightTree)
-		# print tree.right.data
-		# print tree.left.data
-
 		if len(tree.left.data) >= 4 :
-			treeSubdividsor(tree.left)
-		# print tree.right.data
+			treeSubdividsor(tree.left,height,width)
+		
+	if len(rightTree) > 1 :
+		tree.right = Tree(rightTree)
 		if len(tree.right.data) >= 4 :
-			treeSubdividsor(tree.right) # Problem that it not cut anymore and then he recursive like hell!!
+			treeSubdividsor(tree.right,height,width)
+	
+def reconstuctContourList(contour):
+	used = {}
+	rangeX = {'min': 99999 , 'max' : -1}
+	rangeY = {'min': 99999 , 'max' : -1}
+	newContour = []
+	for point in contour:
+		if rangeX['min'] > point[0][0]:
+			rangeX['min'] = point[0][0]
+		if rangeX['max'] < point[0][0]:
+			rangeX['max'] = point[0][0]
+
+		if rangeY['min'] > point[0][1]:
+			rangeY['min'] = point[0][1]
+		if rangeY['max'] < point[0][1]:
+			rangeY['max'] = point[0][1]
+
+		if np.array_str(point) not in used:
+			# if point[0][0]
+			used[np.array_str(point)] = 1
+			newContour.append(point)
+
+	myDrawContour(newContour)
+
+	return newContour
 
 def test():
 	global imgTest
@@ -183,25 +220,22 @@ def test():
 	# imgRGBcube = cv2.cvtColor(cv2.imread('Test_picture/' + image),cv2.COLOR_BGR2RGB)
 	edgesRGBcube = auto_canny(imgRGBcube)
 	im2, contours, hierarchy = cv2.findContours( edgesRGBcube.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-	# print hierarchy
 	listOfContoursList = []
 	longestIndex = 0
 	longestIndex = findLongestAndCreateListofContour(contours,longestIndex,listOfContoursList)
-	# cv2.drawContours(imgTest,listOfContoursList , longestIndex, (255,172,255), 0)
-	# print listOfContoursList[0]
-	# cv2.drawContours(imgTest, testSlopeCountour, -1, (150,255,150), 0)
+
 	treeSet = []
 	groupListToTree(treeSet, listOfContoursList)
 	## TEST WITH LONGESTINDEX ##
-	# print treeSet[longestIndex].data
-	treeSubdividsor(treeSet[longestIndex])
-	print recurRound
-	# traverseTreeToSelectSection(treeSet[longestIndex])
+ 	reconstuctContourList(treeSet[longestIndex].data)
+	# treeSubdividsor(treeSet[longestIndex],height,width)
 
-	###############################
+	print recurRound
 	pyplot.imshow(imgTest)
 	pyplot.show()
 
+	###############################
+	
 if __name__ == "__main__":
 	test()
 	# main()
