@@ -3,7 +3,7 @@ import math
 import random
 from TesTree import Tree
 from GraphD import Graph
-from LineGraph import Graph
+from LineGraph import LineGraph
 from LineVertex import LineVertex
 import numpy as np
 import subprocess
@@ -69,8 +69,8 @@ def contoursToGraphList(contours):
 def lineToLineVertexAndLineGraph(lineDict,lineEndPointDict):
 	lineGraph = LineGraph()
 	for line in lineDict:
-		tmpVertex = LineVertex(line,lineEndPointDict)
-		lineGraph.addVertex(tmpVertex)
+		tmpLineVertex = LineVertex(line,lineEndPointDict)
+		lineGraph.addVertex(line,tmpLineVertex)
 	return lineGraph
 
 def getLongestLenghtGraph(graphList):
@@ -85,17 +85,17 @@ def getLongestLenghtGraph(graphList):
 def makeLineDictWithEndPoints(lineDict):
 	lineEndPointDict = {}
 	for line in lineDict:
-			leftMostPoint = 99999
-			rightMostPoint = 0
+			leftMostPoint = (99999,0)
+			rightMostPoint = (0,0)
 			# a,b,c = random.randint(50,255),random.randint(50,255),random.randint(50,255)
 			for vertex in lineDict[line]:
 				# imgTest[vertex[1]][vertex[0]] = (a,b,c)
-				if vertex[0] < leftMostPoint: 
-					leftMostPoint = vertex[0]
-				if vertex[0] > rightMostPoint:
-					rightMostPoint = vertex[0]	
-				drawApproxLine(line[0],line[1],leftMostPoint,rightMostPoint)
-				lineEndPointDict[line] = (leftMostPoint,rightMostPointg)
+				if vertex[0] < leftMostPoint[0]: 
+					leftMostPoint = vertex
+				if vertex[0] > rightMostPoint[0]:
+					rightMostPoint = vertex	
+				drawApproxLine(line[0],line[1],leftMostPoint[0],rightMostPoint[0])
+				lineEndPointDict[line] = (leftMostPoint,rightMostPoint)
 	return lineEndPointDict
 #-----------------------------------------------------------------------
 
@@ -117,12 +117,14 @@ def main():
 	# print contours
 	graphList = contoursToGraphList(contours)
 	graphLongest = getLongestLenghtGraph(graphList)
-	for graph in graphList:
+	# for graph in graphList:
 		# graph.printGraph(imgTest)
-		lineDict , vertexOnLineDict = graph.subGraphToLineBFS(imgTest)
-		lineEndPointDict = makeLineDictWithEndPoints(lineDict)
-		lineGraph = lineToLineVertexAndLineGraph(lineDict,lineEndPointDict)
-		
+	lineDict , vertexOnLineDict = graphLongest.subGraphToLineBFS(imgTest)
+	lineEndPointDict = makeLineDictWithEndPoints(lineDict)
+	lineGraph = lineToLineVertexAndLineGraph(lineDict,lineEndPointDict)
+
+
+
 
 
 
