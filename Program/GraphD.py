@@ -72,7 +72,9 @@ def LSFNormalOffset(xArray,yArray):
 	try:	
 		b1 = (float(size)*sumXY-float(sumX)*sumY)/(float(size)*sumX2-float(sumX)*sumX)
 	except:
+		# print "Except"
 		b1 = 0.0000001
+		# print b1
 	return (b0,b1)
 
 def LSFWithPerpendicularOffset(xArray,yArray):
