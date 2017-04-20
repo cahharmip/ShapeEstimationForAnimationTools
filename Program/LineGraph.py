@@ -33,8 +33,8 @@ class LineGraph(object):
 		else :
 			return False
 
-	def addVertex(self,line,lineVertex):
-			self.__graphDict[line] = lineVertex
+	def addVertex(self,lineVertex):
+			self.__graphDict[lineVertex] = []
 
 	def addEdge(self,edge): # Edge will have { (line1,line2) : type of junction}
 		#edge is in list form.
@@ -49,5 +49,4 @@ class LineGraph(object):
 			self.__graphDict[vertex2].append(vertex1)
 
 	def traverseAndAssignEdge(self):
-
 		return 0

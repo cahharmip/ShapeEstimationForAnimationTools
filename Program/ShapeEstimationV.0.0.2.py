@@ -70,7 +70,7 @@ def lineToLineVertexAndLineGraph(lineDict,lineEndPointDict):
 	lineGraph = LineGraph()
 	for line in lineDict:
 		tmpLineVertex = LineVertex(line,lineEndPointDict)
-		lineGraph.addVertex(line,tmpLineVertex)
+		lineGraph.addVertex(tmpLineVertex)
 	return lineGraph
 
 def getLongestLenghtGraph(graphList):
@@ -116,20 +116,23 @@ def main():
 	im2, contours, hierarchy = cv2.findContours( edgesRGBcube.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 	# print contours
 	graphList = contoursToGraphList(contours)
-	graphLongest = getLongestLenghtGraph(graphList)
-	# for graph in graphList:
+	graphLongest = getLongestLenghtGraph(graphList)	# for graph in graphList:
 		# graph.printGraph(imgTest)
 	lineDict , vertexOnLineDict = graphLongest.subGraphToLineBFS(imgTest)
+	print len(lineDict)
 	lineEndPointDict = makeLineDictWithEndPoints(lineDict)
 	lineGraph = lineToLineVertexAndLineGraph(lineDict,lineEndPointDict)
+	while(len(lineGraph.getEdgesList()) < 6):
+		tangentDict = {}
+		NormalsDict = {}
+		inLineDict = {}
+		for line in lineGraph.getVertices():  #>>>> O(N)
+			line.growSearchLine()
+		break
 
 
-
-
-
-
-	pyplot.imshow(imgTest)
-	pyplot.show()
+	# pyplot.imshow(imgTest)
+	# pyplot.show()
 
 if __name__ == "__main__":
 	main()
