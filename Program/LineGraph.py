@@ -36,17 +36,15 @@ class LineGraph(object):
 	def addVertex(self,lineVertex):
 			self.__graphDict[lineVertex] = []
 
-	def addEdge(self,edge): # Edge will have { (line1,line2) : type of junction}
+	def addEdge(self,line1,line2,junctionType): # Edge will have { (line1,line2) : type of junction}
 		#edge is in list form.
-		edge = set(edge)
-		(vertex1, vertex2) = tuple(edge)
-		if vertex1 in self.__graphDict:
-			if vertex2 not in set(self.__graphDict[vertex1]):
-				self.__graphDict[vertex1].append(vertex2)
+		if line1 in self.__graphDict:
+			if line2 not in set(self.__graphDict[line1]):
+				self.__graphDict[line1].append((line2,junctionType))
 		else:
-			self.__graphDict[vertex1] = [vertex2]
-		if vertex1 not in set(self.__graphDict[vertex2]):
-			self.__graphDict[vertex2].append(vertex1)
+			self.__graphDict[line1] = [(line2,junctionType)]
+		if line1 not in set(self.__graphDict[line2]):
+			self.__graphDict[line2].append((line1,junctionType))
 
 	def traverseAndAssignEdge(self):
 		return 0

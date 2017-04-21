@@ -67,8 +67,7 @@ def contoursToGraphList(contours):
 			graphList.append(tmpGraph)
 	return graphList
 
-def lineToLineVertexAndLineGraph(lineDict,lineEndPointDict):
-	lineGraph = LineGraph()
+def lineToLineVertexAndLineGraph(lineDict,lineEndPointDict,lineGraph):
 	for line in lineDict:
 		tmpLineVertex = LineVertex(line,lineEndPointDict)
 		lineGraph.addVertex(tmpLineVertex)
@@ -157,7 +156,7 @@ def BresenhamLine(start, end):
         points.reverse()
     return points
 
-def checkIntersectTangent(bresenhamIndex,tangentPoint,line,height,width):
+def checkIntersectTangent(bresenhamIndex,tangentPoint,line,height,width,graph):
 	# print tangentPoint
 	for point in tangentPoint:
 		if point[1] >= height:
@@ -171,17 +170,18 @@ def checkIntersectTangent(bresenhamIndex,tangentPoint,line,height,width):
 			intersectType = bresenhamIndex[point][1]
 			if intersectType == "tangent"and not intersectLine == line:
 				# print "addEdgeWithType L-Junction"
-				i = 0
+				graph.addEdge(line,intersectLine,"L-Junction")
 			elif intersectType == "normals":
 				# print "addEdgeWithType Collinearity"
-				i = 0
+				graph.addEdge(line,intersectLine,"Colinearity")
 			else:
 				# print "addEdgeWithType T-Junction"
 				i = 0
+				# graph.addEdge(line,intersectLine,"T-Junction")
 		else:
 			bresenhamIndex[point] = (line,"tangent")
 
-def checkIntersectNormals(bresenhamIndex,normalsPoint,line,height,width):
+def checkIntersectNormals(bresenhamIndex,normalsPoint,line,height,width,graph):
 	for point in normalsPoint:
 		if point[1] >= height:
 			imgTest[height-1][point[0]] = (140,255,100)
@@ -194,22 +194,23 @@ def checkIntersectNormals(bresenhamIndex,normalsPoint,line,height,width):
 			intersectType = bresenhamIndex[point][1]
 			if intersectType == "tangent"and not intersectLine == line:
 				# print "addEdgeWithType Collinearity"
-				i = 0
+				graph.addEdge(line,intersectLine,"Colinearity")
 		else:
 			bresenhamIndex[point] = (line,"normals")
 
-def checkIntersectLine(bresenhamIndex,lenghtPoint,line):
+def checkIntersectLine(bresenhamIndex,lenghtPoint,line,graph):
 	for point in lenghtPoint:
 		if point in bresenhamIndex:
 			intersectLine = bresenhamIndex[point][0]
 			intersectType = bresenhamIndex[point][1]
 			if intersectType == "tangent" and not intersectLine == line:
-				# print "addEdgeWithType T-junction"
 				i = 0
+				# print "addEdgeWithType T-junction"
+				# graph.addEdge(line,intersectLine,"T-Junction")
 		else:
 			bresenhamIndex[point] = (line,"normals")
 
-def drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght,height,width):
+def drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght,height,width,graph):
 	tangentStartPoint = BresenhamLine(tangent[0][1][1],tangent[0][1][0])
 	tangentEndPoint = BresenhamLine(tangent[1][1][0],tangent[1][1][1])
 	normalStartRPoint = BresenhamLine(normals[0][1][0],normals[0][1][1])
@@ -218,13 +219,13 @@ def drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,le
 	normalEndLPoint = BresenhamLine(normals[3][1][0],normals[3][1][1])
 	lenghtPoint = BresenhamLine(lenght[0],lenght[1])
 
-	checkIntersectTangent(bresenhamIndex,tangentStartPoint,line,height,width)
-	checkIntersectTangent(bresenhamIndex,tangentEndPoint,line,height,width)
-	checkIntersectNormals(bresenhamIndex,normalStartRPoint,line,height,width)
-	checkIntersectNormals(bresenhamIndex,normalStartLPoint,line,height,width)
-	checkIntersectNormals(bresenhamIndex,normalEndRPoint,line,height,width)
-	checkIntersectNormals(bresenhamIndex,normalEndLPoint,line,height,width)
-	checkIntersectLine(bresenhamIndex,lenghtPoint,line)
+	checkIntersectTangent(bresenhamIndex,tangentStartPoint,line,height,width,graph)
+	checkIntersectTangent(bresenhamIndex,tangentEndPoint,line,height,width,graph)
+	checkIntersectNormals(bresenhamIndex,normalStartRPoint,line,height,width,graph)
+	checkIntersectNormals(bresenhamIndex,normalStartLPoint,line,height,width,graph)
+	checkIntersectNormals(bresenhamIndex,normalEndRPoint,line,height,width,graph)
+	checkIntersectNormals(bresenhamIndex,normalEndLPoint,line,height,width,graph)
+	checkIntersectLine(bresenhamIndex,lenghtPoint,line,graph)
 
 #-----------------------------------------------------------------------
 
@@ -240,23 +241,23 @@ def main():
 	# print contours
 	graphList = contoursToGraphList(contours)
 	graphLongest = getLongestLenghtGraph(graphList)
+	lineGraphAll = LineGraph()
 	for graph in graphList:
 		# graph.printGraph(imgTest)
 		# lineDict , vertexOnLineDict = graphLongest.subGraphToLineBFS(imgTest)
 		lineDict , vertexOnLineDict = graph.subGraphToLineBFS(imgTest)
 		# print len(lineDict)
 		lineEndPointDict = makeLineDictWithEndPoints(lineDict)
-		lineGraph = lineToLineVertexAndLineGraph(lineDict,lineEndPointDict)
+		lineToLineVertexAndLineGraph(lineDict,lineEndPointDict,lineGraphAll)
 		bresenhamIndex = {}
-		ck = 0
-		while(len(lineGraph.getEdgesList()) < 20):
-			for line in lineGraph.getVertices():  #>>>> O(N)
-				line.growSearchLine()
-				tangent,normals,lenght = line.getVertexData()
-				drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght,height,width)
-			ck += 1
-			if ck > 5:
-				break
+		
+	while len(lineGraphAll.getEdgesList()) < 6700:
+		print len(lineGraphAll.getEdgesList())
+		for line in lineGraphAll.getVertices():  #>>>> O(N)
+			line.growSearchLine()
+			tangent,normals,lenght = line.getVertexData()
+			drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght,height,width,lineGraphAll)
+			
 
 
 
