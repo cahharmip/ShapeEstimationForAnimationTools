@@ -157,30 +157,44 @@ def BresenhamLine(start, end):
         points.reverse()
     return points
 
-def checkIntersectTangent(bresenhamIndex,tangentPoint,line):
+def checkIntersectTangent(bresenhamIndex,tangentPoint,line,height,width):
+	# print tangentPoint
 	for point in tangentPoint:
-		print point
-		imgTest[point[1]][point[0]] = (255,0,0)
+		if point[1] >= height:
+			imgTest[height-1][point[0]] = (255,0,0)
+		elif point[0] >= width:
+			imgTest[point[1]][width-1] = (255,0,0)
+		else:
+			imgTest[point[1]][point[0]] = (255,0,0)
 		if point in bresenhamIndex:
 			intersectLine = bresenhamIndex[point][0]
 			intersectType = bresenhamIndex[point][1]
-			if intersectType == "tangent":
-				print "addEdgeWithType L-Junction"
+			if intersectType == "tangent"and not intersectLine == line:
+				# print "addEdgeWithType L-Junction"
+				i = 0
 			elif intersectType == "normals":
-				print "addEdgeWithType Collinearity"
+				# print "addEdgeWithType Collinearity"
+				i = 0
 			else:
-				print "addEdgeWithType T-Junction"
+				# print "addEdgeWithType T-Junction"
+				i = 0
 		else:
 			bresenhamIndex[point] = (line,"tangent")
 
-def checkIntersectNormals(bresenhamIndex,normalsPoint,line):
+def checkIntersectNormals(bresenhamIndex,normalsPoint,line,height,width):
 	for point in normalsPoint:
-		imgTest[point[1]][point[0]] = (140,255,140)
+		if point[1] >= height:
+			imgTest[height-1][point[0]] = (140,255,100)
+		elif point[0] >= width:
+			imgTest[point[1]][width-1] = (140,255,100)
+		else :
+			imgTest[point[1]][point[0]] = (140,255,100)
 		if point in bresenhamIndex:
 			intersectLine = bresenhamIndex[point][0]
 			intersectType = bresenhamIndex[point][1]
-			if intersectType == "tangent":
-				print "addEdgeWithType Collinearity"
+			if intersectType == "tangent"and not intersectLine == line:
+				# print "addEdgeWithType Collinearity"
+				i = 0
 		else:
 			bresenhamIndex[point] = (line,"normals")
 
@@ -189,33 +203,27 @@ def checkIntersectLine(bresenhamIndex,lenghtPoint,line):
 		if point in bresenhamIndex:
 			intersectLine = bresenhamIndex[point][0]
 			intersectType = bresenhamIndex[point][1]
-			if intersectType == "tangent":
-				print "addEdgeWithType T-junction"
+			if intersectType == "tangent" and not intersectLine == line:
+				# print "addEdgeWithType T-junction"
+				i = 0
 		else:
 			bresenhamIndex[point] = (line,"normals")
 
-def drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght):
-	tangentStartPoint = BresenhamLine(tangent[0][0],tangent[0][1])
-	# print tangentStartPoint
-	tangentEndPoint = BresenhamLine(tangent[1][0],tangent[1][1])
-	# print tangentEndPoint
-	normalStartRPoint = BresenhamLine(normals[0][0],normals[0][1])
-	# print normalStartRPoint
-	normalStartLPoint = BresenhamLine(normals[1][0],normals[1][1])
-	# print normalStartLPoint
-	normalEndRPoint = BresenhamLine(normals[2][0],normals[2][1])
-	# print normalEndRPoint
-	normalEndLPoint = BresenhamLine(normals[3][0],normals[3][1])
-	# print normalEndLPoint
+def drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght,height,width):
+	tangentStartPoint = BresenhamLine(tangent[0][1][1],tangent[0][1][0])
+	tangentEndPoint = BresenhamLine(tangent[1][1][0],tangent[1][1][1])
+	normalStartRPoint = BresenhamLine(normals[0][1][0],normals[0][1][1])
+	normalStartLPoint = BresenhamLine(normals[1][1][0],normals[1][1][1])
+	normalEndRPoint = BresenhamLine(normals[2][1][0],normals[2][1][1])
+	normalEndLPoint = BresenhamLine(normals[3][1][0],normals[3][1][1])
 	lenghtPoint = BresenhamLine(lenght[0],lenght[1])
-	# print lenghtPoint
 
-	checkIntersectTangent(bresenhamIndex,tangentStartPoint,line)
-	checkIntersectTangent(bresenhamIndex,tangentEndPoint,line)
-	checkIntersectNormals(bresenhamIndex,normalStartRPoint,line)
-	checkIntersectNormals(bresenhamIndex,normalStartLPoint,line)
-	checkIntersectNormals(bresenhamIndex,normalEndRPoint,line)
-	checkIntersectNormals(bresenhamIndex,normalEndLPoint,line)
+	checkIntersectTangent(bresenhamIndex,tangentStartPoint,line,height,width)
+	checkIntersectTangent(bresenhamIndex,tangentEndPoint,line,height,width)
+	checkIntersectNormals(bresenhamIndex,normalStartRPoint,line,height,width)
+	checkIntersectNormals(bresenhamIndex,normalStartLPoint,line,height,width)
+	checkIntersectNormals(bresenhamIndex,normalEndRPoint,line,height,width)
+	checkIntersectNormals(bresenhamIndex,normalEndLPoint,line,height,width)
 	checkIntersectLine(bresenhamIndex,lenghtPoint,line)
 
 #-----------------------------------------------------------------------
@@ -227,32 +235,29 @@ def main():
 	height,width = imgRGBcube.shape[:2]
 	imgTest = np.zeros((height,width,3), np.uint8)
 	imgTest = imgRGBcube[:] / 4
-	# for image in image_list:
-		# imgTest = np.zeros((height,width,3), np.uint8)
-		# imgRGBcube = cv2.cvtColor(cv2.imread('Test_picture/' + image),cv2.COLOR_BGR2RGB)
 	edgesRGBcube = auto_canny(imgRGBcube)
 	im2, contours, hierarchy = cv2.findContours( edgesRGBcube.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 	# print contours
 	graphList = contoursToGraphList(contours)
-	graphLongest = getLongestLenghtGraph(graphList)	# for graph in graphList:
+	graphLongest = getLongestLenghtGraph(graphList)
+	for graph in graphList:
 		# graph.printGraph(imgTest)
-	lineDict , vertexOnLineDict = graphLongest.subGraphToLineBFS(imgTest)
-	# print len(lineDict)
-	lineEndPointDict = makeLineDictWithEndPoints(lineDict)
-	for line in lineEndPointDict:
-		print lineEndPointDict[line]
-		# imgTest[lineEndPointDict[line][0][1]][lineEndPointDict[line][0][0]] = (255,0,0)
-		# imgTest[lineEndPointDict[line][1][1]][lineEndPointDict[line][1][0]] = (255,255,0)
-	lineGraph = lineToLineVertexAndLineGraph(lineDict,lineEndPointDict)
-	bresenhamIndex = {}
-	while(len(lineGraph.getEdgesList()) < 20):
-		for line in lineGraph.getVertices():  #>>>> O(N)
-			line.growSearchLine()
-			tangent,normals,lenght = line.getVertexData()
-			drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght)
+		# lineDict , vertexOnLineDict = graphLongest.subGraphToLineBFS(imgTest)
+		lineDict , vertexOnLineDict = graph.subGraphToLineBFS(imgTest)
+		# print len(lineDict)
+		lineEndPointDict = makeLineDictWithEndPoints(lineDict)
+		lineGraph = lineToLineVertexAndLineGraph(lineDict,lineEndPointDict)
+		bresenhamIndex = {}
+		ck = 0
+		while(len(lineGraph.getEdgesList()) < 20):
+			for line in lineGraph.getVertices():  #>>>> O(N)
+				line.growSearchLine()
+				tangent,normals,lenght = line.getVertexData()
+				drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght,height,width)
+			ck += 1
+			if ck > 5:
+				break
 
-			# print "hello"
-		break
 
 
 	pyplot.imshow(imgTest)
