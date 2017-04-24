@@ -1,6 +1,9 @@
 import cv2
 import math
 import random
+import bisect
+import networkx as nx
+from TestNx import TestNx
 from TesTree import Tree
 from GraphD import Graph
 from LineGraph import LineGraph
@@ -36,9 +39,16 @@ def drawApproxLine(b0,b1,leftMostPoint,rightMostPoint,lineEndPointDict,line):
 	firstPoint = (leftMostPoint,int(yInit))
 	secondPoint = (rightMostPoint,int(yDes))
 	lineEndPointDict[line] = (firstPoint,secondPoint)
-	# print "FirstPoint" , firstPoint
-	# print "SecondPoint", secondPoint
-	cv2.line(imgTest,secondPoint,firstPoint,(255,255,0),0)
+	# cv2.line(imgTest,secondPoint,firstPoint,(255,255,0),0)
+
+def drawApproxLineX(b0,b1,leftMostPoint,rightMostPoint,color,imgTmp):
+	yInit = b0 + b1*leftMostPoint
+	yDes = b0 + b1*rightMostPoint
+	print "_____ Drawing a line ______"
+	firstPoint = (leftMostPoint,int(yInit))
+	secondPoint = (rightMostPoint,int(yDes))
+	# print firstPoint ,secondPoint
+	cv2.line(imgTmp,secondPoint,firstPoint,color,0)
 
 def myDrawContour(contour):
 	a,b,c = random.randint(0,255),random.randint(0,255),random.randint(0,255)
@@ -69,7 +79,7 @@ def contoursToGraphList(contours):
 
 def lineToLineVertexAndLineGraph(lineDict,lineEndPointDict,lineGraph):
 	for line in lineDict:
-		tmpLineVertex = LineVertex(line,lineEndPointDict)
+		tmpLineVertex = LineVertex({line:lineDict[line]},lineEndPointDict)
 		lineGraph.addVertex(tmpLineVertex)
 	return lineGraph
 
@@ -168,10 +178,10 @@ def checkIntersectTangent(bresenhamIndex,tangentPoint,line,height,width,graph):
 		if point in bresenhamIndex:
 			intersectLine = bresenhamIndex[point][0]
 			intersectType = bresenhamIndex[point][1]
-			if intersectType == "tangent"and not intersectLine == line:
+			if intersectType == "tangent"and intersectLine != line:
 				# print "addEdgeWithType L-Junction"
 				graph.addEdge(line,intersectLine,"L-Junction")
-			elif intersectType == "normals":
+			elif intersectType == "normals"and intersectLine != line:
 				# print "addEdgeWithType Collinearity"
 				graph.addEdge(line,intersectLine,"Colinearity")
 			else:
@@ -192,7 +202,7 @@ def checkIntersectNormals(bresenhamIndex,normalsPoint,line,height,width,graph):
 		if point in bresenhamIndex:
 			intersectLine = bresenhamIndex[point][0]
 			intersectType = bresenhamIndex[point][1]
-			if intersectType == "tangent"and not intersectLine == line:
+			if intersectType == "tangent"and intersectLine != line:
 				# print "addEdgeWithType Collinearity"
 				graph.addEdge(line,intersectLine,"Colinearity")
 		else:
@@ -203,8 +213,8 @@ def checkIntersectLine(bresenhamIndex,lenghtPoint,line,graph):
 		if point in bresenhamIndex:
 			intersectLine = bresenhamIndex[point][0]
 			intersectType = bresenhamIndex[point][1]
-			if intersectType == "tangent" and not intersectLine == line:
-				i = 0
+			# if intersectType == "tangent" and intersectLine != line:
+			# 	graph.addEdge(line,intersectLine,"L-Junction")
 				# print "addEdgeWithType T-junction"
 				# graph.addEdge(line,intersectLine,"T-Junction")
 		else:
@@ -226,43 +236,106 @@ def drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,le
 	checkIntersectNormals(bresenhamIndex,normalEndRPoint,line,height,width,graph)
 	checkIntersectNormals(bresenhamIndex,normalEndLPoint,line,height,width,graph)
 	checkIntersectLine(bresenhamIndex,lenghtPoint,line,graph)
+	return tangentStartPoint, tangentEndPoint, normalStartRPoint, normalStartLPoint
 
 #-----------------------------------------------------------------------
 
 def main():
 	global imgTest
 	image_list = getFileName() #circleNaturalHighlight #cubeGreenUnderShadeNoon #complexSqGreenNoonLight
-	imgRGBcube = cv2.cvtColor(cv2.imread('Test_picture/complexSqGreenNoonLight.jpg'),cv2.COLOR_BGR2RGB) 
+	imgRGBcube = cv2.cvtColor(cv2.imread('Test_picture/cubeGreenUnderShadeNoon.jpg'),cv2.COLOR_BGR2RGB) 
 	height,width = imgRGBcube.shape[:2]
 	imgTest = np.zeros((height,width,3), np.uint8)
 	imgTest = imgRGBcube[:] / 4
+	imgRGBcube = cv2.blur(imgRGBcube,(5,5))
 	edgesRGBcube = auto_canny(imgRGBcube)
 	im2, contours, hierarchy = cv2.findContours( edgesRGBcube.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-	# print contours
 	graphList = contoursToGraphList(contours)
 	graphLongest = getLongestLenghtGraph(graphList)
 	lineGraphAll = LineGraph()
+	tnx = TestNx()
+	nxGraph = nx.Graph()
 	for graph in graphList:
-		# graph.printGraph(imgTest)
-		# lineDict , vertexOnLineDict = graphLongest.subGraphToLineBFS(imgTest)
 		lineDict , vertexOnLineDict = graph.subGraphToLineBFS(imgTest)
-		# print len(lineDict)
 		lineEndPointDict = makeLineDictWithEndPoints(lineDict)
 		lineToLineVertexAndLineGraph(lineDict,lineEndPointDict,lineGraphAll)
 		bresenhamIndex = {}
-		
-	while len(lineGraphAll.getEdgesList()) < 6700:
-		print len(lineGraphAll.getEdgesList())
-		for line in lineGraphAll.getVertices():  #>>>> O(N)
-			line.growSearchLine()
-			tangent,normals,lenght = line.getVertexData()
-			drawAndCheckIntersectInBresenhamIndex(bresenhamIndex,line,tangent,normals,lenght,height,width,lineGraphAll)
-			
+	countCyclic = 0
+	cycleList = {}
+	gg = 0
+	# ---------- Ranking ------------ #
+	rankList = []
+	for line in lineGraphAll.getVertices():
+		if gg == 0 :
+			print type(line) 
+		gg=1
+		lineData,tangent,normals,lenght = line.getVertexData()
+		rankList.append((line,line.getLineSize()))
+	rankLine = sorted(rankList, key=lambda line: line[1],reverse=True)
+	# print rankLine
+	# print 'Sorpted'
+	# -------------------------------- # 
+	# print len(rankList)
+
+	while len(cycleList) < 7:
+		#-------- Make Random ---------#
+		chosenLine = []
+		rng = np.random.exponential(scale=1.0) 
+		if rng <= 1:
+			chosenLine = rankLine[:int(len(rankLine)*0.2)]
+		else:
+			chosenLine  = rankLine[int(len(rankLine)*0.2):]
+
+		#------------------------------#
+
+		for line in chosenLine:  #>>>> O(N)
+			line[0].growSearchLine()
+			lineData,tangent,normals,lenght = line[0].getVertexData()
+			tnx.drawAndCheckIntersectInBresenhamIndexNx(bresenhamIndex,line[0],tangent,normals,lenght,height,width,nxGraph,imgTest)
+			nxList = nx.cycle_basis(nxGraph)
+			# for x in nxList:
+			# 	for j in x:
+			# 		print j
+			# 		print nxGraph[j <<<< This code will get edge.
+			countCyclic += len(nxList)
+			# countCyclic += 1
+			for node in nxList:
+				nodeTuple = tuple(node)
+				if len(node) > 6:
+					if nodeTuple not in cycleList:
+						cycleList[nodeTuple] = True
+						print "Convex detected!!"
+				for lineCyclic in node:
+					lineCyclic.degradeSearchLineLength()
 
 
+	for nodes in cycleList:
+		imgTmp = np.zeros((height,width,3), np.uint8)
+		print "Figure_______________________________________________"
+		for x in nodes:
+			print nxGraph[x]
+		print "_____________________________________________________"
+		# imgTmp = imgTest[:]
+		color = (random.randint(100,255),random.randint(100,255),random.randint(100,255))
+		for line in nodes:
+			lineData,tangent,normals,lenght = line.getVertexData()
+			leftMostPoint = (99999,0)
+			rightMostPoint = (0,0)
+			for vertex in lineData.values()[0]:
+				if vertex[0] < leftMostPoint[0]: 
+					leftMostPoint = vertex
+				if vertex[0] > rightMostPoint[0]:
+					rightMostPoint = vertex
+			drawApproxLineX(lineData.keys()[0][0],lineData.keys()[0][1],leftMostPoint[0],rightMostPoint[0],color,imgTmp)
 
+		# pyplot.imshow(imgTest)
+		pyplot.figure()
+		pyplot.imshow(imgTmp)
+	pyplot.figure()
 	pyplot.imshow(imgTest)
 	pyplot.show()
+
+	# pyplot.imshow(imgTest)
 
 if __name__ == "__main__":
 	main()

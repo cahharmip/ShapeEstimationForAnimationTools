@@ -207,13 +207,13 @@ class Graph(object):
 		while(stack):
 			visit = stack.pop()
 			# print visit
-			basBool = False
+			addedVertex = False
 			for vertex in self.getAdjacentsList(visit):
 				if vertex not in visited:
 					visited.add(vertex)
 					stack.append(vertex)
 					kStepList.append(vertex)
-					basBool = True
+					addedVertex = True
 			if len(kStepList) >= mostDeg :
 				dellist = kStepList[:]
 				newline = makeLine(kStepList)
@@ -233,7 +233,7 @@ class Graph(object):
 									removed = 1
 									break
 				kStepList = dellist[:]
-			elif basBool == False:
+			elif addedVertex == False:
 				dellist = kStepList[:]
 				newline = makeLine(kStepList)
 				if lineDict:

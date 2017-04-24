@@ -51,9 +51,13 @@ def directionVector(directionVector):
 class LineVertex(object):
 	def __init__(self,line,lineEndPoint): # line == {(b0,b1) : vertices.sorted } // lineEndPoint == {(b0,b1) : (leftMostPoint ,rightMostPoint)}
 		self.line = line
+		# print line.keys()[0]
 		# self.linePerp = calulateNormals(line,lineEndPoint[line]) #linePerp == (linePerpStart,linePerpEnd)
-		self.start = lineEndPoint[line][0] # (xlMost,ylMost)
-		self.end = lineEndPoint[line][1] # (xrMost,yrMost)
+		self.start = lineEndPoint[line.keys()[0]][0] # (xlMost,ylMost)
+		# print self.start
+		self.end = lineEndPoint[line.keys()[0]][1] # (xrMost,yrMost)
+		# print math.pow(self.start[0]-self.end[0],2) - math.pow(self.start[1]-self.end[1],2)
+		self.lineSize = math.sqrt(math.pow(self.start[0]-self.end[0],2) + math.pow(self.start[1]-self.end[1],2))
 		self.directionVector = (self.end[0] - self.start[0], self.end[1] - self.start[1])
 		self.norm = normalizeVector(self.directionVector)
 		self.normtan = directionVector(self.directionVector)
@@ -63,20 +67,30 @@ class LineVertex(object):
 		self.normalEndR = (self.norm, [self.end,self.end])
 		self.tangentStart = (self.normtan,[self.start,self.start])
 		self.tangentEnd = (self.normtan,[self.end,self.end])
-		self.length = [self.start,self.end] # vertex that draw
-		self.searchLineLenght = 0
+		self.length = [self.start,self.end] # vertex that draw	
+		self.searchLineLength = 0
+
+	def getLineSize(self):
+		return self.lineSize
+
+	def degradeSearchLineLength(self):
+		if self.searchLineLength > 10:
+			self.searchLineLength -= int(self.searchLineLength*2/3)
+		else:
+			self.searchLineLength -= int(self.searchLineLength/2)
 
 	def growSearchLine(self):
-		self.searchLineLenght += 1 # searchline 
-		self.growTangent(self.searchLineLenght)
-		self.growNormals(self.searchLineLenght)
+		self.searchLineLength += 1 # searchline 
+		self.growTangent(self.searchLineLength)
+		self.growNormals(self.searchLineLength)
 		# return "add search line."
 
 	def getVertexData(self):
+		lineData = self.line
 		tangent = (self.tangentStart, self.tangentEnd) # ([spoint,origin],[origin,spoint])
 		normals = (self.normalStartL, self.normalStartR, self.normalEndL, self.normalEndR) #([spoint,origin],[origin,spoint] ...)
 		length = (self.start, self.end)
-		return tangent,normals,length
+		return lineData,tangent,normals,length
 
 	def confiqRange(self,tangentStartLast,tangentEndLast,normalStartR,normalStartL,normalEndR,normalEndL):
 		self.tangentStart[1] = tangentStartLast
@@ -86,10 +100,6 @@ class LineVertex(object):
 		self.normalEndR[1] = normalEndR
 		self.normalEndL[0] = normalEndL
 		return 0
-
-	def makeEdge(self, graph, neigbour):
-		edge = (self.vertex,neigbour)
-		graph.addEdge(edge)
 
 	def growTangent(self,length):
 		self.tangentStart[1][0] = (int(self.start[0] + self.tangentStart[0][0] * (-length)), int(self.start[1]  + self.tangentStart[0][1] * -length))
